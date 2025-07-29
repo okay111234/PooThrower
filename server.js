@@ -6,31 +6,35 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const INDEX_PATH = path.join(__dirname, "index.html");
-const username = "myUser123"; // change this if needed
 
-// Middleware to parse JSON
-app.use(express.json());
+app.use(express.json()); // Parse JSON body
 
-// Random ID generator
+// Generate random short ID
 function generateId(length = 6) {
   return Math.random().toString(36).substr(2, length);
 }
 
-// POST /update — writes formatted HTML to index.html
 app.post("/update", (req, res) => {
+  const { username, content } = req.body;
+
+  if (!username || !content) {
+    return res.status(400).send("Missing username or content");
+  }
+
   const id = generateId();
-  const content = req.body.content || "";
   const formatted = `${username},${id},\n${content}`;
 
   fs.writeFile(INDEX_PATH, formatted, (err) => {
-    if (err) return res.status(500).send("Failed to update index");
+    if (err) {
+      console.error("❌ Failed to write:", err);
+      return res.status(500).send("Failed to update index.html");
+    }
 
-    console.log(`✅ index.html updated by ${username} with ID ${id}`);
+    console.log(`✅ index.html updated by ${username} (${id})`);
 
-    // Auto-reset the file after 2 seconds
     setTimeout(() => {
       fs.writeFile(INDEX_PATH, "", () => {
-        console.log("🧼 index.html reset to empty");
+        console.log("🧼 index.html reset");
       });
     }, 2000);
 
@@ -42,5 +46,5 @@ app.post("/update", (req, res) => {
 app.use(express.static(__dirname));
 
 app.listen(PORT, () => {
-  console.log(`🌐 Server running on http://localhost:${PORT}`);
+  console.log(`🌐 Server running at http://localhost:${PORT}`);
 });
