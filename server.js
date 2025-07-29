@@ -5,38 +5,42 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Read plain text/html body
-app.use(express.text({ type: "*/*" }));
+const INDEX_PATH = path.join(__dirname, "index.html");
+const username = "myUser123"; // change this if needed
 
-// POST /update — changes index.html on disk
+// Middleware to parse JSON
+app.use(express.json());
+
+// Random ID generator
+function generateId(length = 6) {
+  return Math.random().toString(36).substr(2, length);
+}
+
+// POST /update — writes formatted HTML to index.html
 app.post("/update", (req, res) => {
-  const html = req.body;
+  const id = generateId();
+  const content = req.body.content || "";
+  const formatted = `${username},${id},\n${content}`;
 
-  if (!html || typeof html !== "string") {
-    return res.status(400).send("Invalid HTML");
-  }
+  fs.writeFile(INDEX_PATH, formatted, (err) => {
+    if (err) return res.status(500).send("Failed to update index");
 
-  // Write to index.html
-  fs.writeFile(path.join(__dirname, "index.html"), html, (err) => {
-    if (err) return res.status(500).send("Failed to write file");
+    console.log(`✅ index.html updated by ${username} with ID ${id}`);
 
-    console.log("✅ index.html updated");
-
-    // OPTIONAL: Reset after 10 seconds
+    // Auto-reset the file after 2 seconds
     setTimeout(() => {
-      fs.writeFile(path.join(__dirname, "index.html"), "", (err) => {
-        if (err) console.error("❌ Failed to reset index.html");
-        else console.log("🧼 index.html reset to empty");
+      fs.writeFile(INDEX_PATH, "", () => {
+        console.log("🧼 index.html reset to empty");
       });
-    }, 10000); // 10 seconds
+    }, 2000);
 
-    res.send("index.html updated");
+    res.send(`Script executed with ID: ${id}`);
   });
 });
 
-// Serve index.html statically
+// Serve index.html
 app.use(express.static(__dirname));
 
 app.listen(PORT, () => {
-  console.log(`🌐 Server running: http://localhost:${PORT}`);
+  console.log(`🌐 Server running on http://localhost:${PORT}`);
 });
